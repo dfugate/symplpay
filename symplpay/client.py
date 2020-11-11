@@ -24,6 +24,7 @@
 
 import sys
 from time import sleep
+import urllib
 
 try:
     from oauthlib.oauth2 import BackendApplicationClient, TokenExpiredError
@@ -155,6 +156,8 @@ class Client(object):
         I.e., repeats the request up to a maximum number of retries, sleeping
         between attempts as to not cause a DoS. 
         '''
+        last_status_code = None
+
         for i in range(self.max_retries):
             try:
                 response = self.session.get(url)
@@ -162,18 +165,21 @@ class Client(object):
                     return response.json()
                 else:
                     num_retries = self.max_retries - i - 1
+                    last_status_code = response.status_code
                     if num_retries:
                         self.l.error(f'Bad response ({response.status_code}) from {url}! Retryring {num_retries} more times.')
                         sleep(self.retry_sleep)
             except TokenExpiredError as e:
                 num_retries = self.max_retries - i - 1
+                last_status_code = 401
                 self.l.error(f'Token expired! Renewing...')
                 self.__assign_token()
 
             if not num_retries:
                 err_msg = f'Retry attempts exhausted for {url}!'
                 self.l.error(err_msg)
-                raise Exception(err_msg)
+                error = urllib.error.HTTPError(url, last_status_code, err_msg, None, None)
+                raise error
 
 
 # --MAIN----------------------------------------------------------------------------------------------------------------

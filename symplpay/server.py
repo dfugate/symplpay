@@ -24,6 +24,8 @@
 
 import os
 import logging
+import http.client
+from urllib.error import HTTPError
 from argparse import ArgumentParser
 from datetime import datetime
 
@@ -84,9 +86,14 @@ class Server(object):
         creditCardState = bottle.request.query.get("creditCardState")
         deviceState = bottle.request.query.get("deviceState")
         self.l.debug(f'compositeUsers: {userId}, {creditCardState}, {deviceState}')
-
-        ret_val = c.composite_users(userId, creditCardState, deviceState,
-                                    bottle.request.url)
+        try:
+            ret_val = c.composite_users(userId, creditCardState, deviceState,
+                                        bottle.request.url)
+        except HTTPError as e:
+            ret_val = bottle.HTTPResponse(status=e.code, 
+                                          body={'error': 'general' if e.code not in http.client.responses else http.client.responses[e.code],
+                                                'error_description': e.reason}
+                                          )
 
         return ret_val
 
