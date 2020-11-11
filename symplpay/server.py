@@ -63,7 +63,6 @@ class Server(object):
     # --REST APIs--------------------------------------------------------------
     def compositeUsers(self, userId):
         '''
-        TODO better documentation
         Composes three separate REST calls:
             GET https://api.qa.fitpay.ninja/users/:userId
             GET https://api.qa.fitpay.ninja/users/:userId/devices
@@ -71,15 +70,21 @@ class Server(object):
 
         into a single REST response:
             GET http://localhost:8080/compositeUsers/:userId
-        '''
-        ret_val = {}
 
+        :param userId: ID of the user we want to learn about
+        :param creditCardState: limit credit cards to those matching this state.
+        Note that this is *not* a Python parameter; instead it's yanked
+        out of the request's query (bottle framework limitation)
+        :param deviceState: limit devices to those matching this state.
+        Note that this is *not* a Python parameter; instead it's yanked
+        out of the request's query (bottle framework limitation)
+        :return: Composite JSON response of the the REST calls. Example:
+
+        '''
         creditCardState = bottle.request.query.get("creditCardState")
         deviceState = bottle.request.query.get("deviceState")
         self.l.debug(f'compositeUsers: {userId}, {creditCardState}, {deviceState}')
 
-        # userId
-        ret_val['userId'] = userId
         ret_val = c.composite_users(userId, creditCardState, deviceState,
                                     bottle.request.url)
 

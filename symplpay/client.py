@@ -41,7 +41,7 @@ class Client(object):
     '''
     def __init__(self, 
                  client_id, client_secret, base_url, token_url,
-                 logger, 
+                 l, 
                  max_retries=3, retry_sleep=1):
         '''
         Constructor
@@ -49,7 +49,7 @@ class Client(object):
         :param client_secret: REST API password for base_url
         :param base_url: base URL of the REST services we'll consume
         :param token_url: URL used for token generator
-        :param logger: Python logger
+        :param l: Python logger
         :param max_retries: if we timeout or otherwise fail to invoke an API,
                             this is the maximum number of retry attempts we'll
                             make
@@ -60,7 +60,7 @@ class Client(object):
         self.client_secret = client_secret
         self.base_url = base_url
         self.token_url = token_url
-        self.l = logger
+        self.l = l
 
         self.max_retries = max_retries
         self.retry_sleep = retry_sleep
@@ -73,6 +73,7 @@ class Client(object):
     def composite_users(self, user_id, credit_card_state, device_state,
                         given_url, user_id_url='/users/%s'):
         '''
+        TODO document this.
         '''
         ret_val = {
             '_links': {
@@ -99,30 +100,39 @@ class Client(object):
         ret_val['userId'] = user_json['id']
 
         credit_cards_url = user_json['_links']['creditCards']['href']
-        # TODO - don't kill the server. Use pagination instead
+        # Note, while we could use pagination here, I think it's fair to say a
+        # single user is going to have a *reasonable* number of credit cards.
+        #
+        # Also, although /users/{userId}/creditCards does provide an "excludeState"
+        # param, it doesn't include an "includeState". Translation: to perform the
+        # filter server-side one would need to either maintain a hard-coded list
+        # here of all credit card states (BAD IDEA - states can be added/renamed 
+        # over time) *or* invoke a REST API method to obtain this info (BAD IDEA -
+        # to be on the safe side, you'd need to invoke it every time this function is
+        # called and it's not worth it when there are small numbers of credit 
+        # cards associated with each user).  Instead, I simply use a Python list
+        # comprehension on the JSON pulled from the remote server.
         credit_cards_json = self.__get_json(credit_cards_url)
         credit_cards = [ {'creditCardId': x['creditCardId'], 
                           'state': x['state'],
                           '_links': {'self': {'href': x['_links']['self']['href']}}} for x in credit_cards_json['results']
                           if credit_card_state is None or x['state'].upper().strip() == credit_card_state]
-
+        # Intentionally do not include "offset" and "limit" as this REST API 
+        # does not support pagination nor should it due to the explaination 
+        # above.
         ret_val['creditCards'] = {
-            'limit': len(credit_cards),
-            'offset': 0,
             'totalResults': len(credit_cards),
             'results': credit_cards
         }
 
         devices_url = user_json['_links']['devices']['href']
-        # TODO - don't kill the server. Use pagination instead
+        # Prior Comments on credit card pagination and states apply here as well.
         devices_json = self.__get_json(devices_url)
         devices = [ {'deviceId': x['deviceIdentifier'], 
                      'state': x['state'],
                      '_links': {'self': {'href': x['_links']['self']['href']}}} for x in devices_json['results']
                      if device_state is None or x['state'].upper().strip()==device_state]
         ret_val['devices'] = {
-            'limit': len(devices),
-            'offset': 0,
             'totalResults': len(devices),
             'results': devices
         }
