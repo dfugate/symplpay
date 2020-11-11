@@ -65,16 +65,63 @@ class Client(object):
 
         self.max_retries = max_retries
         self.retry_sleep = retry_sleep
-
-        self.client = BackendApplicationClient(client_id=self.client_id)
-        self.session = OAuth2Session(client=self.client)
         
         self.__assign_token()
 
     def composite_users(self, user_id, credit_card_state, device_state,
                         given_url, user_id_url='/users/%s'):
         '''
-        TODO document this.
+        Issues the three related API calls, merging the results
+        into a single dictionary which can easily be converted to JSON
+        by bottle.
+
+        :param user_id: unique identifier of a user
+        :param credit_card_state: limit credit card results to those
+                                  matching this state. Ignored if None
+        :param device_state: limit device results to those matching this
+                             state. Ignored if None
+        :param given_url: URL used to invoke our own REST API. It's given back
+                          to the caller
+        :param user_id_url: partial path of the REST API URL used to grab info
+                            about a particular user
+        :return: JSON result combining individual results from the three REMOTE
+        calls. Follows this pattern:
+        {
+          "_links": {
+            "self": {
+              "href": "<given_url>"
+            }
+          },
+          "userId": "<user_id>",
+          "creditCards": {
+            "totalResults": <lenth of results>,
+            "results": [
+              {
+                "creditCardId": "<credit card unique ID (GUID)>",
+                "state": "<credit card state>",
+                "_links": {
+                  "self": {
+                    "href": "https://api.qa.fitpay.ninja/users/<user_id>/creditCards/<credit card unique ID>"
+                    }
+                }
+              }
+            ]
+          },
+          "devices": {
+            "totalResults": <length of results>,
+            "results": [
+              {
+                "deviceId": "<device unique ID (GUID)>",
+                "state": "<device state>",
+                "_links": {
+                  "self": {
+                    "href": "https://api.qa.fitpay.ninja/users/<user_id>/devices/<device unique ID>"
+                  }
+                }
+              }
+            ]
+          }
+        }
         '''
         ret_val = {
             '_links': {
@@ -84,7 +131,7 @@ class Client(object):
                 }
         }
 
-        # Normal parameters
+        # Normalize parameters
         if credit_card_state is not None:
             credit_card_state = credit_card_state.upper().strip()
         if device_state is not None:
@@ -112,7 +159,7 @@ class Client(object):
         # to be on the safe side, you'd need to invoke it every time this function is
         # called and it's not worth it when there are small numbers of credit 
         # cards associated with each user).  Instead, I simply use a Python list
-        # comprehension on the JSON pulled from the remote server.
+        # comprehension on the JSON pulled from the remote server to filter them out.
         credit_cards_json = self.__get_json(credit_cards_url)
         credit_cards = [ {'creditCardId': x['creditCardId'], 
                           'state': x['state'],
@@ -120,7 +167,7 @@ class Client(object):
                           if credit_card_state is None or x['state'].upper().strip() == credit_card_state]
         # Intentionally do not include "offset" and "limit" as this REST API 
         # does not support pagination nor should it due to the explaination 
-        # above.
+        # above regarding few CCs/user.
         ret_val['creditCards'] = {
             'totalResults': len(credit_cards),
             'results': credit_cards
@@ -144,6 +191,8 @@ class Client(object):
         '''
         A long-running server may need to refresh it's token.
         '''
+        self.client = BackendApplicationClient(client_id=self.client_id)
+        self.session = OAuth2Session(client=self.client)
         self.l.debug('Fetching new token.')
         self.token = self.session.fetch_token(token_url=self.token_url,
                                               client_id=self.client_id,
