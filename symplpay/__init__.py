@@ -31,19 +31,33 @@ if sys.version_info.major != 3:
     print("This version of Python, {{sys.version}}, is not supported! Please install 3.x!")
     sys.exit(1)
 
+# --CLASSES--------------------------------------------------------------------
+class PersistentBufferingHandler(logging.handlers.BufferingHandler):
+    '''
+    Subclass of BufferingHandler which *never* throws logs away.
+    '''
+    def flush(self):
+        '''
+        Overridden
+        :return: Nothing
+        '''
+        pass
+
 # --GLOBALS--------------------------------------------------------------------
 LOG_FORMAT = '%(asctime)-15s - %(levelname)-8s - %(message)s'
 DATETIME_FORMAT = '%Y_%m_%d_%H_%M_%S_%f'
 
+# Setup a global logger and log formatter
+l = logging.getLogger('symplpay')
+l.setLevel(logging.DEBUG)
+lf = logging.Formatter(LOG_FORMAT)
+_lh = logging.StreamHandler(sys.stdout)
+_lh.setFormatter(lf)
+l.addHandler(_lh)
+# In-memory log handler to render logs on an HTML page
+_pbh = PersistentBufferingHandler(1000)
+_pbh.setLevel(logging.DEBUG)
+l.addHandler(_pbh)
+l.pbh = _pbh
 
 # --HELPER FUNCTIONS ----------------------------------------------------------
-class PersistentBufferingHandler(logging.handlers.BufferingHandler):
-    """
-    Subclass of BufferingHandler which *never* throws logs away.
-    """
-    def flush(self):
-        """
-        Overridden
-        :return: Nothing
-        """
-        pass

@@ -47,15 +47,17 @@ class Server(object):
     Composite Controller class.
     Handles incoming HTTP requests.
     '''
-    def __init__(self, c, l):
+    def __init__(self, c, l, debug):
         '''
         Constructor
         :param c: REST API client object to delegate incoming API calls to.
         :param l: Logger instance.
+        :param debug: Running in Production environment?
         :return: Instance of this class.
         '''
         self.c = c
         self.l = l
+        self.debug = debug
         self.l.info('symplpay server initialized!')
 
     # --REST APIs--------------------------------------------------------------
@@ -101,7 +103,11 @@ class Server(object):
         :return:
         '''
         self.l.debug('Request for "logs".')
-        return bottle.template('logs', log_buffer=self.l.pbh.buffer)
+        if self.debug:
+            return bottle.template('logs', log_buffer=self.l.pbh.buffer)
+        else:
+            return bottle.HTTPResponse(status=403, 
+                                       body='Please use the "--debug" flag when starting this webapp to enable world-visible logs:(')
 
     def static(self, file_path):
         '''
@@ -144,7 +150,7 @@ if __name__ == "__main__":
                         help="TCP port to run this server from.",
                         type=int,
                         default=8080)
-    parser.add_argument("--log",
+    parser.add_argument("--log_file",
                         help="Text log file location.",
                         type=str,
                         default=f'symplpay.{now_str}.log')
@@ -154,42 +160,25 @@ if __name__ == "__main__":
                         action='store_true',
                         help='Emit debug messages.')
     args = parser.parse_args()
-    # Parameter normalization
-    args.log = os.path.abspath(args.log)
+    args.log_file = os.path.abspath(args.log_file)
 
-    # -- Configure logging ----------------------------------------------------
-    # TODO - move this to __init__.py
-    l = logging.getLogger('symplpay')
-    l.setLevel(logging.DEBUG)
-    lf = logging.Formatter(LOG_FORMAT)
-    
-    lh = logging.StreamHandler(sys.stdout)
-    lh.setFormatter(lf)
-    l.addHandler(lh)
-
-    fh = logging.FileHandler(args.log, mode='w')
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(lf)
-    l.addHandler(fh)
-
-    # We need an in-memory logging handler to render the logs on an HTML page (easily at least).
-    pbh = PersistentBufferingHandler(1000)
-    pbh.setLevel(logging.DEBUG)
-    l.addHandler(pbh)
-    l.pbh = pbh
-    
-    l.info(f'Server logs available from {args.log} *or* http://localhost:{args.port}/logs')
+    # We want file logs as well------------------------------------------------
+    _fh = logging.FileHandler(args.log_file, mode='w')
+    _fh.setLevel(logging.DEBUG)
+    _fh.setFormatter(lf)
+    l.addHandler(_fh)
+    l.info(f'Server logs available from {args.log_file} *or* http://localhost:{args.port}/logs')
 
     # -- Configure the web server ---------------------------------------------
     c = Client(args.client_id, args.client_secret, args.base_url, args.token_url, l)
-    s = Server(c, l)
+    s = Server(c, l, args.debug)
 
     # Initialize routes
     bottle.get("/")(s.main)
     bottle.get("/logs")(s.logs)
     bottle.route('/static/:file_path#.+#')(s.static)
     bottle.get("/favicon.ico")(s.get_favicon)
-
     bottle.get('/compositeUsers/<userId>')(s.compositeUsers)
 
+    # Start honoring requests!
     bottle.run(host='localhost', port=args.port, debug=args.debug, quiet=True)
