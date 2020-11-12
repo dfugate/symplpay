@@ -18,6 +18,7 @@ This software is distributed under the **MIT License**.
 ### Known Issues
 
 * The "--ssl" flag doesn't work on Windows 10
+* The _logs_ page doesn't work without usage of the "--debug" flag. By-Design as availability of this functionality in production would be considered a security issue without appropriate authorization (not implemented by symplpay)
 
 ## Installation
 

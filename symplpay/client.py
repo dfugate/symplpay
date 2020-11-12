@@ -69,7 +69,7 @@ class Client(object):
         self.__assign_token()
 
     def composite_users(self, user_id, credit_card_state, device_state,
-                        given_url, user_id_url='/users/%s'):
+                        given_url, user_id_uri='/users/%s'):
         '''
         Issues the three related API calls, merging the results
         into a single dictionary which can easily be converted to JSON
@@ -82,7 +82,7 @@ class Client(object):
                              state. Ignored if None
         :param given_url: URL used to invoke our own REST API. It's given back
                           to the caller
-        :param user_id_url: partial path of the REST API URL used to grab info
+        :param user_id_uri: partial path of the REST API URL used to grab info
                             about a particular user
         :return: JSON result combining individual results from the three REMOTE
         calls. Follows this pattern:
@@ -137,10 +137,10 @@ class Client(object):
         if device_state is not None:
             device_state = device_state.upper().strip()
 
-        user_id_url = f'{self.base_url}{user_id_url % user_id}'
-        self.l.debug(f'User ID URL is {user_id_url}')
+        user_id_uri = f'{self.base_url}{user_id_uri % user_id}'
+        self.l.debug(f'User ID URL is {user_id_uri}')
 
-        user_json = self.__get_json(user_id_url)
+        user_json = self.__get_json(user_id_uri)
         
         # In theory, we could just take what was passed as a parameter...
         # Could also be the case the API normalized the user ID somehow
