@@ -28,6 +28,7 @@ import http.client
 from urllib.error import HTTPError
 from argparse import ArgumentParser
 from datetime import datetime
+import ssl
 
 try:
     from symplpay import *
@@ -177,6 +178,11 @@ if __name__ == "__main__":
                         default=False,
                         action='store_true',
                         help='Emit debug messages.')
+    parser.add_argument('--ssl',
+                        dest='ssl',
+                        default=False,
+                        action='store_true',
+                        help='Accept HTTPS in addition to HTTP.')
     args = parser.parse_args()
     args.log_file = os.path.abspath(args.log_file)
 
@@ -186,6 +192,30 @@ if __name__ == "__main__":
     _fh.setFormatter(lf)
     l.addHandler(_fh)
     l.info(f'Server logs available from {args.log_file} *or* http://localhost:{args.port}/logs')
+
+    bottle_args = {
+        'host': 'localhost', 
+        'port': args.port, 
+        'debug': args.debug,
+        'quiet': True
+    }
+
+    # HTTPS support is "fun" from bottle---------------------------------------
+    if args.ssl:
+        l.warn(f'Globally disabling SSL validation.')
+        # In theory, this black magic should disable bottle's SSL validation.
+        # See https://www.python.org/dev/peps/pep-0476/ for background
+        try:
+            _create_unverified_https_context = ssl._create_unverified_context
+        except AttributeError:
+            # Legacy Python that doesn't verify HTTPS certificates by default
+            pass
+        else:
+            # Handle target environment that doesn't support HTTPS verification
+            ssl._create_default_https_context = _create_unverified_https_context
+
+        bottle_args['server'] = 'gunicorn'
+
 
     # -- Configure the web server ---------------------------------------------
     c = Client(args.client_id, args.client_secret, args.base_url, args.token_url, l)
@@ -199,4 +229,4 @@ if __name__ == "__main__":
     bottle.get('/compositeUsers/<userId>')(s.compositeUsers)
 
     # Start honoring requests!
-    bottle.run(host='localhost', port=args.port, debug=args.debug, quiet=True)
+    bottle.run(**bottle_args)
