@@ -276,7 +276,7 @@ if __name__ == "__main__":
         print(json.dumps(composite_stuff, sort_keys=False, indent=2))
         print('-------------------------------')
 
-    # quick filtering check
+    # Quick filtering check
     uid_9 = users['results'][9]['id']
     composite9_stuff = client.composite_users(uid, None, None, "https://does.not.exist.com")
     uid9_cc_state = composite_stuff['creditCards']['results'][0]['state']
@@ -291,3 +291,9 @@ if __name__ == "__main__":
 
     composite9_stuff = client.composite_users(uid, uid9_cc_state.lower(), uid9_d_state.upper(), "https://does.not.exist.com")
     print(f'Different case 9: {composite9_stuff["devices"]["totalResults"]} devices & {composite9_stuff["creditCards"]["totalResults"]} creditcards.')
+
+    # Negative test case
+    try:
+        client.composite_users("does-not-exist", None, None, "https://does.not.exist.com")
+    except urllib.error.HTTPError as e:
+        print(f'Expected error was indeed thrown: {e}')
