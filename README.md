@@ -26,9 +26,9 @@ All remaining instructions below assume you're running Linux instead of Windows.
 1. Open an _xterm_ and run `pip3 install requests_oauthlib`
 2. Run `python3 -c "import oauthlib"` to confirm the package has been successfully installed. No output and an exit code of 0 is expected.
 
-# Startup Instructions (Server)
+# Server Initialization Instructions
 Open a new _xterm_:
-1. `export PYTHONPATH=.`
-1. `python3 symplpay.server --client_id <your ID> --client_secret <your secret> --debug` to start the server. You can also run `python3 symplpay/server` to see the many configurable server parameters
+1. `export PYTHONPATH=.` (only if you do not already have Python configured to look in the current directory for Python files)
+1. `python3 -m symplpay.server --client_id <your ID> --client_secret <your secret> --debug` to start the server. You can also run `python3 symplpay/server` to see the many configurable server parameters
 1. Open [http://localhost:8080](http://localhost:8080) in your favorite web browser
 1. Use _curl_, _Postman_, etc. to invoke the server's single API - http://localhost:8080/compositeUsers/:userId
