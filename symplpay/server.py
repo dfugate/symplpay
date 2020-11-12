@@ -94,6 +94,12 @@ class Server(object):
                                           body={'error': 'general' if e.code not in http.client.responses else http.client.responses[e.code],
                                                 'error_description': e.reason}
                                           )
+        except Exception as e:
+            # Should never happen, but just in case...
+            ret_val = bottle.HTTPResponse(status=500, 
+                                          body={'error': 'internal server error',
+                                                'error_description': str(e)}
+                                          )
 
         return ret_val
 
