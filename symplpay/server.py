@@ -191,7 +191,7 @@ if __name__ == "__main__":
     _fh.setLevel(logging.DEBUG)
     _fh.setFormatter(lf)
     l.addHandler(_fh)
-    l.info(f'Server logs available from {args.log_file} *or* http://localhost:{args.port}/logs')
+    l.info(f'Server logs will be available on the server at {args.log_file}')
 
     bottle_args = {
         'host': 'localhost', 
@@ -214,8 +214,9 @@ if __name__ == "__main__":
             # Handle target environment that doesn't support HTTPS verification
             ssl._create_default_https_context = _create_unverified_https_context
 
+        l.warn(f'Monkey-patching command-line args for gunicorn')
+        sys.argv = sys.argv[:1]
         bottle_args['server'] = 'gunicorn'
-
 
     # -- Configure the web server ---------------------------------------------
     c = Client(args.client_id, args.client_secret, args.base_url, args.token_url, l)
@@ -229,4 +230,5 @@ if __name__ == "__main__":
     bottle.get('/compositeUsers/<userId>')(s.compositeUsers)
 
     # Start honoring requests!
+    l.info(f'Server logs may also be found online at http{"s" if args.ssl else ""}://localhost:{args.port}/logs')
     bottle.run(**bottle_args)

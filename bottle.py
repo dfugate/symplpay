@@ -2939,8 +2939,15 @@ class GunicornServer(ServerAdapter):
     """ Untested. See http://gunicorn.org/configure.html for options. """
     def run(self, handler):
         from gunicorn.app.base import Application
-
-        config = {'bind': "%s:%d" % (self.host, int(self.port))}
+        import ssl
+        config = {'bind': "%s:%d" % (self.host, int(self.port)),
+                  # DWF changes here
+                  'cert_reqs': ssl.CERT_NONE,
+                  'keyfile': 'certs/server.key',
+                  'certfile': 'certs/server.crt',
+                  #'ca_certs': 'certs/ca-crt.pem'
+                  # DWF changes stop here
+                  }
         config.update(self.options)
 
         class GunicornApplication(Application):
